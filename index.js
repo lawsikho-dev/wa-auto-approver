@@ -876,58 +876,26 @@ async function buildRoster(client) {
         // WhatsApp Web internals shift between versions — try several routes
         // and report which one produced the member list.
         const probe = await client.pupPage.evaluate(async (gid) => {
-          const shape = (arr) => arr.map(function (p) {
-            const id = (p.id && p.id._serialized) ? p.id._serialized : String(p.id || p);
-            return { id: { _serialized: id }, isAdmin: !!(p.isAdmin || p.isSuperAdmin) };
-          });
-          // Modern WhatsApp Web requires Wid objects, not plain strings.
-          let wid = gid;
-          try { if (window.Store && window.Store.WidFactory) wid = window.Store.WidFactory.createWid(gid); } catch (e) {}
-          const errs = [];
-          // A) GroupMetadata store (+ async find to force-load)
+          // Mirrors whatsapp-web.js 1.34.7's own internal group access
+          // (window.require modules — window.Store does not exist here).
           try {
-            if (window.Store && window.Store.GroupMetadata) {
-              let meta = null;
-              try { meta = window.Store.GroupMetadata.get(wid); } catch (e) {}
-              if (!meta && window.Store.GroupMetadata.find) {
-                try { meta = await window.Store.GroupMetadata.find(wid); } catch (e) {}
-              }
-              if (meta && meta.participants) {
-                const arr = meta.participants.getModelsArray ? meta.participants.getModelsArray() : [];
-                if (arr.length) return { method: 'store-meta', parts: shape(arr) };
-              }
-            }
-          } catch (e) { errs.push('A:' + e.message); }
-          // B) Chat model's attached groupMetadata
-          try {
-            if (window.Store && window.Store.Chat) {
-              let c = null;
-              try { c = window.Store.Chat.get(wid); } catch (e) {}
-              if (c && c.groupMetadata && c.groupMetadata.participants) {
-                const arr = c.groupMetadata.participants.getModelsArray ? c.groupMetadata.participants.getModelsArray() : [];
-                if (arr.length) return { method: 'chat-meta', parts: shape(arr) };
-              }
-            }
-          } catch (e) { errs.push('B:' + e.message); }
-          // C) whatsapp-web.js serialized chat
-          try {
-            if (window.WWebJS && window.WWebJS.getChat) {
-              const sc = await window.WWebJS.getChat(gid);
-              const arr = (sc && (sc.participants || (sc.groupMetadata && sc.groupMetadata.participants))) || [];
-              if (arr.length) return { method: 'wwebjs-chat', parts: shape(arr) };
-            }
-          } catch (e) { errs.push('C:' + e.message); }
-          // D) query participants API
-          try {
-            if (window.Store && window.Store.GroupUtils && window.Store.GroupUtils.queryAndUpdateGroupMetadataById) {
-              const meta2 = await window.Store.GroupUtils.queryAndUpdateGroupMetadataById(wid);
-              if (meta2 && meta2.participants) {
-                const arr = meta2.participants.getModelsArray ? meta2.participants.getModelsArray() : (meta2.participants || []);
-                if (arr.length) return { method: 'group-utils', parts: shape(arr) };
-              }
-            }
-          } catch (e) { errs.push('D:' + e.message); }
-          return { method: 'none', diag: JSON.stringify({ widOk: typeof wid === 'object', errs: errs.join(' | ') }), parts: [] };
+            const widFactory = window.require('WAWebWidFactory');
+            const groupWid = widFactory.createWid(gid);
+            const collections = window.require('WAWebCollections');
+            const chat = await collections.Chat.find(groupWid);
+            if (!chat || !chat.groupMetadata) return { method: 'no-chat-or-meta', parts: [] };
+            try { await window.require('WAWebGroupQueryJob').queryAndUpdateGroupMetadataById({ id: gid }); } catch (e) {}
+            const meta = chat.groupMetadata.serialize();
+            let toPn = null;
+            try { toPn = window.require('WAWebLidMigrationUtils').toPn; } catch (e) {}
+            const parts = (meta.participants || []).map(function (p) {
+              let id = p.id;
+              if (toPn) { try { id = toPn(p.id) || p.id; } catch (e) {} }
+              const ser = (id && id._serialized) ? id._serialized : String(id);
+              return { id: { _serialized: ser }, isAdmin: !!(p.isAdmin || p.isSuperAdmin) };
+            });
+            return { method: 'wawebcollections', parts: parts };
+          } catch (e) { return { method: 'error: ' + e.message, parts: [] }; }
         }, entry.groupId);
         participants = probe.parts || [];
         try { chat = await client.getChatById(entry.groupId); } catch (e) { chat = null; }
