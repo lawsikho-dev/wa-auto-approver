@@ -163,7 +163,6 @@ function savePendingReported() {
 // ---- Google Sheet logging ----
 // Every log line is buffered and flushed to the Apps Script webhook once a
 // minute, so the sheet is the primary log store (local file kept as backup).
-const sheetLogBuffer = [];
 
 async function postToSheet(payload) {
   if (!ROSTER_WEBHOOK_URL) return;
@@ -179,18 +178,13 @@ async function postToSheet(payload) {
   }
 }
 
-setInterval(() => {
-  if (sheetLogBuffer.length === 0) return;
-  const lines = sheetLogBuffer.splice(0, sheetLogBuffer.length);
-  postToSheet({ type: 'logs', lines });
-}, 60 * 1000);
+// Bot_Logs tab removed by user preference — logs stay local only.
 
 function log(msg) {
   const ts = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
   const line = `[${ts}] ${msg}`;
   console.log(line);
   try { fs.appendFileSync(LOG_FILE, line + '\n'); } catch {}
-  sheetLogBuffer.push([ts, msg]);
 }
 
 function istNow() {
