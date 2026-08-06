@@ -985,6 +985,12 @@ const client = new Client({
   puppeteer: { headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] },
 });
 
+// Orphaned Chromium from a previous run holds the session lock and makes
+// startup hang forever — clear them before launching our own browser.
+try {
+  require('child_process').execSync(`pkill -9 -f "${path.join(__dirname, '.wa-session')}"`, { stdio: 'ignore' });
+} catch { /* none running — fine */ }
+
 client.on('qr', (qr) => {
   console.log('\nScan this QR with the ADMIN number (WhatsApp > Linked Devices > Link a Device):\n');
   qrcode.generate(qr, { small: true });
