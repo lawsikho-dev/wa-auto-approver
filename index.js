@@ -123,7 +123,7 @@ const SUMMARY_TO_NUMBER = '';
 const SUMMARY_HOUR_IST = 21;
 
 // Member roster audit: every current group member tallied against payment records.
-const ROSTER_HOURS_IST = [10, 19];     // runs once per listed hour, per day
+const ROSTER_HOURS_IST = [10, 15, 20]; // 10am, 3pm, 8pm IST — once per listed hour
 const ROSTER_DAYS_BACK = 90;           // wider window — members may have paid months ago
 // Apps Script web-app URL that appends rows to your sheet (see roster-appscript.gs).
 // One URL handles everything: logs, approvals, alternate approvals, roster.
