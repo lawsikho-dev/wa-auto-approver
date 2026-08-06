@@ -914,10 +914,10 @@ async function buildRoster(client) {
         // DIFFERENT number — recognise them instead of flagging NO RECORD.
         const altRecs = phone ? alternateNumbers.get(phone) : null;
         const altRec = altRecs && altRecs.find((r) => altMatchesEntry(entry, r));
-        let verdict;
+        let verdict; let paidNumber = '';
         if (!phone) { verdict = 'UNRESOLVED'; unknownCount++; }
-        else if (rec && rec.paid) { verdict = 'PAID'; paidCount++; }
-        else if (altRec) { verdict = `PAID (alt-form, paid via ${altRec.original_phone})`; paidCount++; }
+        else if (rec && rec.paid) { verdict = 'PAID'; paidNumber = phone; paidCount++; }
+        else if (altRec) { verdict = 'PAID (alt-form)'; paidNumber = altRec.original_phone; paidCount++; }
         else if (rec) { verdict = `NOT PAID (${rec.status})`; unpaidCount++; }
         else { verdict = 'NO RECORD'; unpaidCount++; }
 
@@ -929,6 +929,7 @@ async function buildRoster(client) {
           phone || wid,
           rec ? rec.name : '',
           verdict,
+          paidNumber,
           rec ? rec.amount : '',
           rec ? rec.at : '',
           (p.isAdmin || p.isSuperAdmin) ? 'admin' : '',
@@ -943,7 +944,7 @@ async function buildRoster(client) {
 
   saveLidCache();
 
-  const header = ['group', 'group_no', 'invite_link', 'funnel', 'phone', 'name', 'payment_status', 'amount', 'paid_at', 'role'];
+  const header = ['group', 'group_no', 'invite_link', 'funnel', 'phone', 'name', 'payment_status', 'paid_number', 'amount', 'paid_at', 'role'];
   const stamp = new Date().toLocaleString('sv-SE', { timeZone: 'Asia/Kolkata' }).replace(/[: ]/g, '-').slice(0, 16);
   const csv = [header, ...rows].map((r) => r.map(csvCell).join(',')).join('\n');
   try {
