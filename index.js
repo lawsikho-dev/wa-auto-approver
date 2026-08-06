@@ -924,6 +924,8 @@ async function buildRoster(client) {
 
         rows.push([
           (chat && chat.name) || entry.label,
+          entry.groupNumber || '',
+          entry.inviteLink || '',
           entry.apiGroups.join(' / '),
           phone || wid,
           rec ? rec.name : '',
@@ -942,7 +944,7 @@ async function buildRoster(client) {
 
   saveLidCache();
 
-  const header = ['group', 'funnel', 'phone', 'name', 'payment_status', 'amount', 'paid_at', 'role'];
+  const header = ['group', 'group_no', 'invite_link', 'funnel', 'phone', 'name', 'payment_status', 'amount', 'paid_at', 'role'];
   const stamp = new Date().toLocaleString('sv-SE', { timeZone: 'Asia/Kolkata' }).replace(/[: ]/g, '-').slice(0, 16);
   const csv = [header, ...rows].map((r) => r.map(csvCell).join(',')).join('\n');
   try {
