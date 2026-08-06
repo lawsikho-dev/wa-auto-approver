@@ -910,9 +910,14 @@ async function buildRoster(client) {
         const wid = p.id ? (p.id._serialized || p.id) : String(p);
         const phone = await widToPhone(client, wid);
         const rec = phone ? history[phone] : null;
+        // Members admitted via the alternate-number form paid under a
+        // DIFFERENT number — recognise them instead of flagging NO RECORD.
+        const altRecs = phone ? alternateNumbers.get(phone) : null;
+        const altRec = altRecs && altRecs.find((r) => altMatchesEntry(entry, r));
         let verdict;
         if (!phone) { verdict = 'UNRESOLVED'; unknownCount++; }
         else if (rec && rec.paid) { verdict = 'PAID'; paidCount++; }
+        else if (altRec) { verdict = `PAID (alt-form, paid via ${altRec.original_phone})`; paidCount++; }
         else if (rec) { verdict = `NOT PAID (${rec.status})`; unpaidCount++; }
         else { verdict = 'NO RECORD'; unpaidCount++; }
 
