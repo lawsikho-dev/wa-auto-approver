@@ -984,7 +984,9 @@ async function maybeRunRoster(client) {
 
 const client = new Client({
   authStrategy: new LocalAuth({ dataPath: path.join(__dirname, '.wa-session') }),
-  puppeteer: { headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] },
+  // protocolTimeout: heavy moments (big backlogs on a small server) can make
+  // Chrome answer slowly — give it 10 minutes instead of erroring at 3.
+  puppeteer: { headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'], protocolTimeout: 600000 },
 });
 
 // Orphaned Chromium from a previous run holds the session lock and makes
