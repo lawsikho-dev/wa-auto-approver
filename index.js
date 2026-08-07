@@ -516,6 +516,7 @@ async function syncConfig() {
         const labelCol = findCol('label');
         const activeCol = findCol('active');
         const numCol = findCol('number'); // "whatsapp Group number" column
+        const identityCol = findCol('funnel name'); // "76/Independent Director Community" — must match orders' Items format
         if (groupCol === -1 || linkCol === -1) {
           log('Sheet missing a group or invite-link column — using fallback config');
           return;
@@ -528,6 +529,7 @@ async function syncConfig() {
             inviteLink: r[linkCol].trim(),
             apiGroups: (r[groupCol] || '').split(',').map(canonicalApiGroup).filter(Boolean),
             groupNumber: numCol !== -1 ? String(r[numCol] || '').trim() : '',
+            identity: identityCol !== -1 ? String(r[identityCol] || '').trim() : '',
           }))
           .filter((e) => e.apiGroups.length);
         if (parsed.length) desired = parsed;
@@ -545,7 +547,7 @@ async function syncConfig() {
   const prev = new Map(watched.map((e) => [e.inviteLink, e]));
   watched = desired.map((d) => {
     const old = prev.get(d.inviteLink);
-    return old ? Object.assign(old, { label: d.label, apiGroups: d.apiGroups, groupNumber: d.groupNumber }) : { ...d };
+    return old ? Object.assign(old, { label: d.label, apiGroups: d.apiGroups, groupNumber: d.groupNumber, identity: d.identity }) : { ...d };
   });
 }
 
@@ -933,6 +935,7 @@ async function buildRoster(client) {
           rec ? rec.amount : '',
           rec ? rec.at : '',
           (p.isAdmin || p.isSuperAdmin) ? 'admin' : '',
+          entry.identity || '',
         ]);
       }
       summary.push(`${(chat && chat.name) || entry.label}: ${participants.length} members — ${paidCount} paid, ${unpaidCount} not paid, ${unknownCount} unresolved`);
@@ -944,7 +947,7 @@ async function buildRoster(client) {
 
   saveLidCache();
 
-  const header = ['group', 'group_no', 'invite_link', 'funnel', 'phone', 'name', 'payment_status', 'paid_number', 'amount', 'paid_at', 'role'];
+  const header = ['group', 'group_no', 'invite_link', 'funnel', 'phone', 'name', 'payment_status', 'paid_number', 'amount', 'paid_at', 'role', 'funnel_identity'];
   const stamp = new Date().toLocaleString('sv-SE', { timeZone: 'Asia/Kolkata' }).replace(/[: ]/g, '-').slice(0, 16);
   const csv = [header, ...rows].map((r) => r.map(csvCell).join(',')).join('\n');
   try {
