@@ -1060,10 +1060,16 @@ async function checkLoop(client) {
 // appears — approval lands ~1-2 min after form submission instead of waiting
 // for the next scheduled sweep. Cheap: one Google CSV fetch per minute.
 let lastAltSignature = '';
+let watcherTicks = 0;
 const ROSTER_NOW_FILE = path.join(__dirname, 'roster-now.txt');
 function startAltWatcher(client) {
   setInterval(async () => {
     if (isNight() || sweeping) return;
+    // Heartbeat: every 10th minute poke the Apps Script webhook so the
+    // AiSensy senders + orders matcher run on OUR pulse — Google's own
+    // time triggers proved unreliable (silently stalled 7 Aug).
+    watcherTicks++;
+    if (watcherTicks % 10 === 0) postToSheet({ type: 'tick' });
     // On-demand roster: `touch roster-now.txt` in the bot folder triggers a
     // fresh group-wise member list within a minute (written to the Roster tab).
     if (fs.existsSync(ROSTER_NOW_FILE)) {
